@@ -315,8 +315,8 @@ Another thing to check is that the certificate for the thing is activated: Open 
 ## To do
 
 1. Get a working understanding of the code in `pubsub.py`. The documentation can be found
-   [here](https://github.com/aws/aws-iot-device-sdk-python-v2). (1 p)
-2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (2 p)
+   [here](https://github.com/aws/aws-iot-device-sdk-python-v2). 
+2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (3 p)
 3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Use, for example, the `time`
    module and `perf_counter()`. See
    [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). (7 p)
