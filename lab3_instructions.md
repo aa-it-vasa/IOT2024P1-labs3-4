@@ -49,29 +49,55 @@ while managing a secure discovery and connection processes between Things.
 explanation on various concepts that you will come across during the lab
 exercises and walks you through discovery and connection management.
 
-## Setup the hardware
+## Setup your local machine
 
-1. We will use a Raspberry Pi as the device gateway. The device is already
-   powered up and connected to the network. To connect to the Raspberry Pi,
-   you need its IP address. The IP address will be given to you during the lab.
-   To be able to reach your gateway from the VM, your laptop also needs to 
-   be conected to the same network using the same wireless network as in Lab 1. 
+You will need some software installed on your local machine.
 
-2. If you use a Mac or Linux machine, chances are very good that you already
-   have an ssh-client installed; just open a terminal and try the `ssh` command.
-   If you have a Windows machine you can, e.g., use [Putty](https://www.putty.org/)
-   or [Termius](https://termius.com/). The normal ssh client can also be available 
-   in you Windows terminal. 
+Commands run in Raspberry Pi is preceded `rpi>` and in your local machine as `local>`.
+These should be excluded when entering the commands. 
 
-   To connect to the gateway either use your graphical ssh client and use it to 
-   connect to the IP address of the Raspberry PI. If you are using the terminal-
-   based ssh client, the command is
-   ```bash
-   ssh pi@IPADDRESS
-   ```
-   The username is `pi` and password is `raspberry`.
+### SSH client
+If you use a Mac or Linux machine, chances are very good that you already
+have an ssh-client installed; just open a terminal and try the `ssh` command.
+
+If you have a Windows machine you can, e.g., use [Putty](https://www.putty.org/)
+or [Termius](https://termius.com/). The normal ssh client can also be available 
+in you Windows terminal. 
+
+### Python environment
+You will need a working Python 3 environment on your laptop. You will need to set 
+this up yourself.
+
+In addition you will need the following Python packages installed `awscrt`, `awsiot`, 
+`awsiotsdk`, and `AWSIoTPythonSDK`. These can be installed with
+```
+local> pip install awscrt awsiot awsiotsdk AWSIoTPythonSDK
+```
+
+### Clone the AWSIoTPythonSDK repository
+We will need some example files available in the `AWSIoTPythonSDK-v2` repository on GitHub
+https://github.com/aws/aws-iot-device-sdk-python-v2. These are included in the repository 
+for the labs, or you can clone it separately
+```
+local> git clone https://github.com/aws/aws-iot-device-sdk-python-v2
+```
+
+## Setup the Raspberry PI
+
+We will use a Raspberry Pi as the device gateway. The device is already
+powered up and connected to the network. To connect to the Raspberry Pi,
+you need its IP address. The IP address will be given to you during the lab.
+To be able to reach your gateway from the VM, your laptop also needs to 
+be conected to the same network using the same wireless network as in Lab 1. 
+
+To connect to the gateway either use your graphical ssh client and use it to 
+connect to the IP address of the Raspberry PI. If you are using the terminal-
+based ssh client, the command is
+```bash
+rpi> ssh pi@IPADDRESS
+```
+The username is `pi` and password is `raspberry`.
   
-   Commands run in Raspberry Pi is preceded `rpi>` and in your local machine as `local>`.
 
 3. Check that Greengrass is not installed and running on the RPI by issuing:
    ```
@@ -276,23 +302,26 @@ to also print new lines that are printed in the log file.
 
 3. Verify in the _MQTT test client_ that your messages are received.
 
-**Troubleshooting**: If the connection is not established, verify the endpoint is correct.
-Also verify that the certificate paths are correct. The client_id` should be
-same as the Thing name under _Manage > All devices > Things_. Another thing to check is that the certificate for the thing is activated: Open your thing under _Manage > All devices > Things_. Under the _Certificates_ tab, there should be a certificate that is indicated as `Active`. 
+### Troubleshooting 
 
-If you run these commands on your own machine (not using the VM), you will probably need to install the aswcrt, awsiot, awsiotsdk and AWSIoTPythonSDK modules in Python: `pip install awscrt awsiot awsiotsdk AWSIoTPythonSDK` and find where `pubsub.py` is located.
+If the connection is not established, verify the endpoint is correct. Also verify that the certificate paths are correct. 
+
+The client_id should be same as the Thing name under _Manage > All devices > Things_. 
+
+Another thing to check is that the certificate for the thing is activated: Open your thing under _Manage > All devices > Things_. Under the _Certificates_ tab, there should be a certificate that is indicated as `Active`. 
+
+
 
 ## To do
 
-1. Get a working understanding of the code `pubsub.py`. The documentation can
-   be found
-   [here](https://s3.amazonaws.com/aws-iot-device-sdk-python-docs/sphinx/html/index.html#module-AWSIoTPythonSDK.core.greengrass.discovery.providers)
-2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (3p)
-3. Modify `pubSub.py` to measure the latency of establishing the connection to the gateway. Use `time`
-   module and use `perf_counter()` to measure the time. See
-   [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from the VM to your gateway. (7p)
-
-## Optional Task
+1. Get a working understanding of the code in `pubsub.py`. The documentation can be found
+   [here](https://github.com/aws/aws-iot-device-sdk-python-v2). (1 p)
+2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (2 p)
+3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Use, for example, the `time`
+   module and `perf_counter()`. See
+   [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). (7 p)
+   
+   ## Optional Task
 
 
 
@@ -301,7 +330,7 @@ If you run these commands on your own machine (not using the VM), you will proba
 Repeat the previous steps to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will
 try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate it.
 
-Instead of using the `Publisher_Sim`, use `Snoopy_Subscriber_GROUPNAME` and try
+Instead of using the `simthing_GROUPNAME`, use `Snoopy_Subscriber_GROUPNAME` and try
 to publish or subscribe to the same topic. 
 
 ## Appendix
@@ -362,4 +391,4 @@ The mutual authentication happens as follows:
 
 1. [AWS Greengrass Documentation](https://docs.aws.amazon.com/greengrass/latest/developerguide/what-is-gg.html)
 2. [AWS Greengrass SDK Documentation](https://s3.amazonaws.com/aws-iot-device-sdk-python-docs/sphinx/html/index.html#module-AWSIoTPythonSDK.core.greengrass.discovery.providers)
-3. [AWS IoT Python SDK and samples](https://github.com/aws/aws-iot-device-sdk-python)
+3. [AWS IoT Python SDK and samples](https://github.com/aws/aws-iot-device-sdk-python-v2)
