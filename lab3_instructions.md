@@ -56,13 +56,22 @@ exercises and walks you through discovery and connection management.
    you need its IP address. The IP address will be given to you during the lab.
    To be able to reach your gateway from the VM, your laptop also needs to 
    be conected to the same network using the same wireless network as in Lab 1. 
-2. To connect to the gateway open a terminal in you VM and ssh into it.
-   The username is `pi` and password is `raspberry`.
-   Commands run in Raspberry Pi is preceded `rpi>` and in your VM as `vm>`.
 
+2. If you use a Mac or Linux machine, chances are very good that you already
+   have an ssh-client installed; just open a terminal and try the `ssh` command.
+   If you have a Windows machine you can, e.g., use [Putty](https://www.putty.org/)
+   or [Termius](https://termius.com/). The normal ssh client can also be available 
+   in you Windows terminal. 
+
+   To connect to the gateway either use your graphical ssh client and use it to 
+   connect to the IP address of the Raspberry PI. If you are using the terminal-
+   based ssh client, the command is
    ```bash
-   vm> ssh pi@IPADDRESS
+   ssh pi@IPADDRESS
    ```
+   The username is `pi` and password is `raspberry`.
+  
+   Commands run in Raspberry Pi is preceded `rpi>` and in your local machine as `local>`.
 
 3. Check that Greengrass is not installed and running on the RPI by issuing:
    ```
@@ -92,6 +101,9 @@ First we will setup an access key. You only need to do this once per group (as l
 **Note:** If the _Create access key_ button is deactivated there might already be two assigned keys (which is the maximum). _Deactivate_ and _Delete_ the old keys before adding a new one! Check that the user is not using the access keys before deactivation.
 
 ### Setup the Greengrass software
+
+**Very important:** Make sure that you are in the Frankfurt (eu-central-1) region on AWS! Otherwise you will run into trouble.
+
 Perform the following steps to setup the Greengrass software:
 
 1. In the AWS Console go to _Services > Internet of Things > IoT Greengrass_. 
@@ -152,8 +164,8 @@ one step.
 2. Enter a unique name for your thing, e.g., `simthing_groupname` and press _Next_. Remember this name!
 3. We want AWS to generate the certificates and keys that will be used to authorize the communication from the thing, so use the default _Auto-generate a new certificate (recommended)_ and press _Next_. 
 4. In the _Policies_ window, select the `GreengrassV2IoTThingPolicy` and just press _Next_. You can review what the policy contains by clicking on the name of it.
-5. In the window _Download certificates and keys_, download the device certificate, public and private keys and store them in the folder 
-   `Publisher_Sim` on the VM. You can rename the certificate, public and private key as
+5. In the window _Download certificates and keys_, download the device certificate, public and private keys and store them in a folder
+   `Publisher_Sim` on your machine. You can rename the certificate, public and private key as
    `publisher_sim.pem.crt`, `publisher_sim-public.pem.key` and
    `publisher_sim-private.pem.key`. Note that if you forget to save these at this stage, you will need to recreate the thing!
 6. Finally, download the RSA 2048 root ca from the window. You can also download it from
@@ -237,7 +249,7 @@ Now we need to connect the thing we created to the Greengrass core device.
 8. Press _Review and deploy_. 
 9. Press _Deploy_.
 
-Now go back to _Manage > Greengrass devices > Deployments_. The deployment you modified will first have the status `Active` which indicates that the changes are being processed on the Greengrass instance on the RPI. After it is finished it will change to `Completed` (it might take some minutes).
+Now go back to _Manage > Greengrass devices > Deployments_. The deployment you modified will first have the status `Active` which indicates that the changes are being processed on the Greengrass instance on the RPI. After it is finished it will change to `Completed` (it might take over 10 minutes).
 
 To troubleshoot you can view the Greengrass logs on the RPI by executing the following command
 ```
@@ -254,21 +266,21 @@ to also print new lines that are printed in the log file.
 1. From _AWS IoT_ -> _Test_ -> _MQTT test client_, setup a new subscriber to the topic
    _saiot/GROUPNAME/publish_. Select _Display payloads as strings (more
    accurate)_ option and then _Subscribe_.
-2. In your VM, run the following commands
+2. On your machine, run the following commands
    
    ```
-   vm> cd Publisher_Sim
-   vm> python3 ../aws-iot-device-sdk-python-v2/samples/pubsub.py --endpoint ENDPOINT --key publisher_sim-private.pem.key --cert publisher_sim.pem.crt --client_id Publisher_GROUPNAME --topic 'saiot/GROUPNAME/publish' --message 'Hello World From GroupName' 
+   local> python aws-iot-device-sdk-python-v2/samples/pubsub.py --endpoint ENDPOINT --key publisher_sim-private.pem.key --cert publisher_sim.pem.crt --client_id simthing_GROUPNAME --topic 'saiot/GROUPNAME/publish' --message 'Hello World From GroupName' 
    ```
-   You can get the ENDPOINT from _AWS IoT_ -> _Settings_ and under _Custom
-   Endpoint_. The names of topic must match with topic name in all the
+   You can get the ENDPOINT from _AWS IoT_ -> _Domain configurations_. The value you are searching after is the _Domain name_. The names of topic must match with topic name in all the
    above steps. Client id option must match the name of the thing.
 
-**Verify**: If the connection is not established, verify the endpoint is correct.
-Also verify that the certificate paths are correct. The Thingname should be
+3. Verify in the _MQTT test client_ that your messages are received.
+
+**Troubleshooting**: If the connection is not established, verify the endpoint is correct.
+Also verify that the certificate paths are correct. The client_id` should be
 same as the Thing name under _Manage > All devices > Things_. Another thing to check is that the certificate for the thing is activated: Open your thing under _Manage > All devices > Things_. Under the _Certificates_ tab, there should be a certificate that is indicated as `Active`. 
 
-If you run these commands on your own machine (not using the VM), you will probably need to install the AWSIoTPythonSDK module in Python: `pip install AWSIoTPythonSDK` and find where `pubsub.py` is located.
+If you run these commands on your own machine (not using the VM), you will probably need to install the aswcrt, awsiot, awsiotsdk and AWSIoTPythonSDK modules in Python: `pip install awscrt awsiot awsiotsdk AWSIoTPythonSDK` and find where `pubsub.py` is located.
 
 ## To do
 
