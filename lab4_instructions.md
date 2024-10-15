@@ -193,14 +193,14 @@ On the terminal on your local machine, navigate to the samples subfolder of the 
 Run the sample Greengrass discovery application. This application expects arguments that specify the client device thing name, the MQTT topic and message to use, and the certificates that authenticate and secure the connection. The following example sends a Hello World message to the GROUPNAME/MyClientDevice1/hello/world topic.
 
 ```bash
-python3 basic_discovery.py \\
-  --thing_name simthing_GROUPNAME \\
-  --topic 'GROUPNAME/MyClientDevice1/hello/world' \\
-  --message 'Hello World!' \\
-  --ca_file root_ca.pem \\
-  --cert publisher_sim.pem.crt \\
-  --key publisher_sim-private.pem.crt \\
-  --region eu-central-1\\
+local> python3 basic_discovery.py \
+  --thing_name simthing_GROUPNAME \
+  --topic 'GROUPNAME/MyClientDevice1/hello/world' \
+  --message 'Hello World!' \
+  --ca_file root_ca.pem \
+  --cert publisher_sim.pem.crt \
+  --key publisher_sim-private.pem.crt \
+  --region eu-central-1 \
   --verbosity Warn
 ```
 The discovery sample application sends the message 10 times and disconnects. It also subscribes to the same topic where it publishes messages. If the output indicates that the application received MQTT messages on the topic, the client device can successfully communicate with the core device.
@@ -271,16 +271,16 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
 
     1. Create folders for recipes and artifacts on the core device.
        ```bash
-       mkdir component
-       cd component
-       mkdir recipes
-       mkdir -p artifacts/MyHelloWorldSubscriber/1.0.0
+       rpi> mkdir component
+       rpi> cd component
+       rpi> mkdir recipes
+       rpi> mkdir -p artifacts/MyHelloWorldSubscriber/1.0.0
        ```
        You must use the format `artifacts/componentName/componentVersion/` for the artifact folder path. Include the component name and version that you specify in the recipe.
 
    2. Use a text editor to create a component recipe with the following contents. This recipe specifies to install the AWS IoT Device SDK v2 for Python and run a script that subscribes to the topic and prints messages. For example, on a Linux-based system, you can run the following command to use GNU nano to create the file.
        ```bash
-       nano recipes/MyHelloWorldSubscriber-1.0.0.json
+       rpi> nano recipes/MyHelloWorldSubscriber-1.0.0.json
        ```
       Copy the following recipe into the file:
       ```json
@@ -323,37 +323,68 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
 
    3. Use a text editor to create a Python script artifact named `hello_world_subscriber.py` with the following contents. This application uses the publish/subscribe IPC service to subscribe to the `GROUPNAME/+/hello/world` topic and print messages that it receives.
        ```bash
-       nano artifacts/MyHelloWorldSubscriber/1.0.0/hello_world_subscriber.py
+       rpi> nano artifacts/MyHelloWorldSubscriber/1.0.0/hello_world_subscriber.py
        ```
    
    4. Copy the following Python code into the file:
        ```python
-      import sys
-      import time
-      import traceback
+      import awsiot.greengrasscoreipc
+      from awsiot.greengrasscoreipc.model import (PublishToTopicRequest, PublishMessage, BinaryMessage, UnauthorizedError)
 
-      from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
+      local_topic = 'GROUPNAME/+/localtocloud'
+      cloud_topic = 'GROUPNAME/+/greengrasstocloud'
+      client_topic = 'GROUPNAME/+/greengrasstolocal'
+      command_topic = 'GROUPNAME/+/cloudtogreengrass'
 
-      CLIENT_DEVICE_HELLO_WORLD_TOPIC = 'GROUPNAME/+/hello/world'
-      TIMEOUT = 10
+      my_counter = 0
+      my_platform = platform.platform()
 
-
-      def on_hello_world_message(event):
+      def on_local_topic(event):
          try:
-            message = str(event.binary_message.message, 'utf-8')
-            print('Received new message: %s' % message)
+            global my_counter
+            my_counter = my_counter+1
+
+            # The message received through MQTT
+            recv_message = str(event.binary_message.message, 'utf-8')
+
+            # The platform identifier
+            my_platform = platform.platform()
+
+            # Publish and send the message
+            message ="Sent from Greengrass Core running on platform {}. Invocation Count {}. Activation message {} ".format(my_platform, my_counter, recv_message)
+            binary_message = BinaryMessage(message=bytes(message, 'utf-8'))
+            publish_message = PublishMessage(binary_message=binary_message)
+            ipc_client = GreengrassCoreIPCClientV2()
+            ipc_client.publish_to_topic(topic=cloud_topic, publish_message=publish_message)
+            print('Successfully published to topic: ' + cloud_topic)
+            ipc_client.close()
+
          except:
             traceback.print_exc()
 
+      def on_command_topic(event):
+         try:
+            recv_message = str(event.binary_message.message, 'utf-8')
+            message ="Cloud message received: {} ".format(recv_message)
+            binary_message = BinaryMessage(message=bytes(pub_message, 'utf-8'))
+            publish_message = PublishMessage(binary_message=binary_message)
+            ipc_client = GreengrassCoreIPCClientV2()
+            ipc_client.publish_to_topic(topic=client_topic, publish_message=publish_message)
+            print('Successfully published to topic: ' + client_topic)
+            ipc_client.close()
+
+         except:
+            traceback.print_exc()
 
       try:
          ipc_client = GreengrassCoreIPCClientV2()
 
          # SubscribeToTopic returns a tuple with the response and the operation.
-         _, operation = ipc_client.subscribe_to_topic(
-            topic=CLIENT_DEVICE_HELLO_WORLD_TOPIC, on_stream_event=on_hello_world_message)
-         print('Successfully subscribed to topic: %s' %
-               CLIENT_DEVICE_HELLO_WORLD_TOPIC)
+         _, operation = ipc_client.subscribe_to_topic(topic=local_topic, on_stream_event=on_local_topic)
+         print('Successfully subscribed to topic: %s' % local_topic)
+
+         _, operation = ipc_client.subscribe_to_topic(topic=command_topic, on_stream_event=on_command_topic)
+         print('Successfully subscribed to command topic: %s' % command_topic)
 
          # Keep the main thread alive, or the process will exit.
          try:
@@ -372,7 +403,7 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
 
    5. Use the Greengrass CLI to deploy the component:
       ```bash
-      sudo /greengrass/v2/bin/greengrass-cli deployment create \
+      rpi> sudo /greengrass/v2/bin/greengrass-cli deployment create \
       --recipeDir recipes \
       --artifactDir artifacts \
       --merge "MyHelloWorldSubscriber=1.0.0"
@@ -380,81 +411,29 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
 
    6. View the component logs to verify that the component installs successfully and subscribes to the topic:
       ```bash
-      sudo tail -f /greengrass/v2/logs/MyHelloWorldSubscriber.log
+      rpi> sudo tail -f /greengrass/v2/logs/MyHelloWorldSubscriber.log
+      ```
+      You can keep the log feed open to verify that the core device receives messages.
+
+   7. On the client device, run the sample Greengrass discovery application again to send messages to the core device:
+      ```bash
+      python3 basic_discovery.py \
+      --thing_name simthing_GROUPNAME \
+      --topic 'GROUPNAME/MyClientDevice1/hello/world' \
+      --message 'Hello World!' \
+      --ca_file root_ca.pem \
+      --cert publisher_sim.pem.crt \
+      --key publisher_sim-private.pem.crt \
+      --region eu-central-1\
+      --verbosity Warn
       ```
 
-## Configure the core device
+   8. View the component logs again to verify that the component receives and prints the messages from the client device.
+      ```bash
+      rpi> sudo tail -f /greengrass/v2/logs/MyHelloWorldSubscriber.log
+      ```
 
-An AWS Greengrass function can subscribe to or publish messages (using the MQTT protocol):
 
-* To and from other devices connected to AWS Greengrass core.
-* To other Lambda functions.
-* To the AWS IoT cloud.
-
-We will now setup the Greengrass core running on the RPI so that the messages are passed from the cloud to the edge (and the other way):
-
-1. Select _AWS IoT > Manage > Greengrass devices > Deployments_. Select the checkmark for the deployment of your Greengrass core in the list (the _Target name_ column should be the name of your core device) and press _Revise_.
-
-2. Press _Next_ to advance to _Step 2: select components_. Select your Lambda function under _My components_. Under _Public components_ we need to add `aws.greengrass.LegacySubscriptionRouter` to the list of activated components. Deactive the switch _Show only selected components_ and select `aws.greengrass.LegacySubscriptionRouter`. Press _Next_.
-
-3. Select `aws.greengrass.clientdevices.mqtt.Bridge` and press _Configure component_. The box _Configuration to merge_ should be changed to:
-   ```
-   {
-	   "mqttTopicMapping": {
-         "GroupName_LocalToCloud": {
-            "topic": "saiot/GROUPNAME/localtocloud",
-            "source": "LocalMqtt",
-            "target": "IotCore"
-         },
-         "GroupName_CloudToLocal": {
-            "topic": "saiot/GROUPNAME/cloudtolocal",
-            "source": "IotCore",
-            "target": "LocalMqtt"
-         }
-      }
-   }
-   ```
-   Remember to update the topic to the correct one for your group. Press _Confirm_. 
-
-4. Select `aws.greengrass.LegacySubscriptionRouter` and press _Configure component_. The box _Configuration to merge_ should be changed to:
-   ```
-   {
-	   "subscriptions": {
-         "Greengrass_LocalToCloud": {
-            "id": "Greengrass_LocalToCloud",
-            "source": "component:yourlambdafunction",
-            "subject": "saiot/GROUPNAME/localtocloud",
-            "target": "cloud"
-         }
-      }
-   }
-   ```
-   Remember to update the topic to the correct one for your group. Also the `yourlambdafunction` should be changed to the name of the Lambda function in Step 2. Press _Confirm_, _Next_, _Next_ and _Deploy_. 
-
-4. Wait until the changes are updated on your RPI (might take a minute or two). Good idea to run  
-   ```
-   rpi> sudo tail -f /greengrass/v2/logs/greengrass.log
-   ```
-   to make sure there are no errors. 
-
-## Verify the Lambda Function is Running on the Device
-
-If the Lambda function is deployed correctly, there should be a file created in the log directory named `lambdaname.log`.
-```
-rpi> sudo ls -als /greengrass/v2/logs/
-rpi> sudo tail -f /greengrass/v2/logs/lambdaname.log
-```
-Check that there are no errors in the log files and that the log file for the lambda is updated. If there are some issues (e.g., your Python code crashes, you might need to restart the Greengrass service by issuing 
-```
-rpi> sudo systemctl restart greengrass
-```
-
-From _AWS IoT_ -> _Test_ -> _MQTT test client_, setup a new subscriber to the topic _saiot/GROUPNAME/localtocloud_. Select _Display payloads as strings (more accurate)_ option and then _Subscribe_.
-
-Each publish is triggering the function handler and creating a new container for each invocation. The invocation count need not increment for every trigger because each on-demand Lambda function has its own container/sandbox. If you publish and trigger the function after waiting for timeout period (default 10 s), you will see that the invocation count is incremented.
-
-This shows that a container, first created from a prior invocation, is being reused, and pre-processing variables outside of function handler have been used.
-	
 ## To do
  
 1. Understand the `greengrassHelloWorld.py` code that was packaged into the Lambda function above.
@@ -463,27 +442,3 @@ This shows that a container, first created from a prior invocation, is being reu
     2. Lambda -> IoT Cloud. Lambda parses the message sent by the device and forwards it to IoT Cloud on topic `saiot/GROUPNAME/localtocloud`.
 3. In your report describe the achieved architecture and behavior of your application. Use figures to illustrate your description. (5p)
 4. In your report describe the behavior differences between a long-lived Lambda function and an on-demand Lambda function deployed on a gateway. Illustrate your response taking a simple application example and provide the corresponding sequence (UML) diagrams for each. (5p)
-
-## Optional tasks
-
-### Asset Monitor
-
-We will make a latency critical application for the following scenario. The scenario has a sensor that measures the temperature of an important asset and sends the value to the edge. If the temperature goes beyond 40 C, the edge responds by actuating an alarm and by indicating the cloud that alarm has been sounded. In addition to viewing the logs, a user at the cloud can also issue the command "TEMP" to get the current temperature of the asset.
-
-You need to create a new an alarm actuator that acts as a subscriber and you can use `pubsub.py` to simulate the alarm by using it as subscriber mode. Read the code to find out how to do this. On successful actuation of the alarm, the alarm device prints out a device indicating that the alarm has been actuated. You may have to modify `pubsub.py` suitably.
-
-To send the temperature, create a modified version of `pubsub.py` (or create a bash script that periodically sends temperatures using the normal `pubsub.py` command).
-
-All your topics should begin with `saiot/GROUPNAME` to avoid clashes with other groups' topics.
-
-Modify the initial Lambda code as you seem fit and establish necessary forward and backward connections to implement the scenario. 
-
-### Hints
-
-1. This is a considerably long task and would require you to chart out the devices, paths and topics on a piece of paper. 
-2. Debate what would be a good model to run Lambda functions. Would it be _On Demand_ or _Long running_?
-3. Lambda functions prints a log on Raspberry Pi gateway and this can serve as a good way to debug your implementations. 
-   ```
-   rpi> sudo cat /greengrass/v2/logs/greengrass.log
-   rpi> sudo cat /greengrass/v2/logs/lambdaname.log
-   ```
