@@ -220,7 +220,7 @@ You can develop Greengrass components that communicate with client devices. Comp
 
 In this section, you update the MQTT bridge component to relay messages from client devices to the local publish/subscribe interface. Then, you develop a component that subscribes to these messages and prints the messages when it receives them.
 
-**To develop a component that communicates with client devices**
+### Setup AWS IoT Core
 
 Revise the deployment to the core device and configure the MQTT bridge component to relay messages from client devices to local publish/subscribe. Do the following:
 
@@ -263,13 +263,129 @@ Revise the deployment to the core device and configure the MQTT bridge component
 
 10. To verify that the deployment succeeds, check the status of the deployment, and check the logs on the core device. 
 
+### Setup the local component
+
+We will now develop and deploy a Greengrass component that subscribes to Hello World messages from client devices. Do the following:
+
+1. Create folders for recipes and artifacts on the Raspberry PI, i.e., the core device.
+
+    1. Create folders for recipes and artifacts on the core device.
+       ```bash
+       mkdir component
+       cd component
+       mkdir recipes
+       mkdir -p artifacts/MyHelloWorldSubscriber/1.0.0
+       ```
+       You must use the format `artifacts/componentName/componentVersion/` for the artifact folder path. Include the component name and version that you specify in the recipe.
+
+   2. Use a text editor to create a component recipe with the following contents. This recipe specifies to install the AWS IoT Device SDK v2 for Python and run a script that subscribes to the topic and prints messages. For example, on a Linux-based system, you can run the following command to use GNU nano to create the file.
+       ```bash
+       nano recipes/MyHelloWorldSubscriber-1.0.0.json
+       ```
+      Copy the following recipe into the file:
+      ```json
+      {
+      "RecipeFormatVersion": "2020-01-25",
+      "ComponentName": "MyHelloWorldSubscriber",
+      "ComponentVersion": "1.0.0",
+      "ComponentDescription": "A component that subscribes to Hello World messages from client devices.",
+      "ComponentPublisher": "Amazon",
+      "ComponentConfiguration": {
+         "DefaultConfiguration": {
+            "accessControl": {
+            "aws.greengrass.ipc.pubsub": {
+               "MyHelloWorldSubscriber:pubsub:1": {
+                  "policyDescription": "Allows access to subscribe to all topics.",
+                  "operations": [
+                  "aws.greengrass#SubscribeToTopic"
+                  ],
+                  "resources": [
+                  "*"
+                  ]
+               }
+            }
+            }
+         }
+      },
+      "Manifests": [
+         {
+            "Platform": {
+            "os": "linux"
+            },
+            "Lifecycle": {
+            "install": "python3 -m pip install --user awsiotsdk",
+            "run": "python3 -u {artifacts:path}/hello_world_subscriber.py"
+            }
+         }
+      ]
+      }
+      ```
+
+   3. Use a text editor to create a Python script artifact named `hello_world_subscriber.py` with the following contents. This application uses the publish/subscribe IPC service to subscribe to the `GROUPNAME/+/hello/world` topic and print messages that it receives.
+       ```bash
+       nano artifacts/MyHelloWorldSubscriber/1.0.0/hello_world_subscriber.py
+       ```
+   
+   4. Copy the following Python code into the file:
+       ```python
+      import sys
+      import time
+      import traceback
+
+      from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
+
+      CLIENT_DEVICE_HELLO_WORLD_TOPIC = 'GROUPNAME/+/hello/world'
+      TIMEOUT = 10
 
 
+      def on_hello_world_message(event):
+         try:
+            message = str(event.binary_message.message, 'utf-8')
+            print('Received new message: %s' % message)
+         except:
+            traceback.print_exc()
 
+
+      try:
+         ipc_client = GreengrassCoreIPCClientV2()
+
+         # SubscribeToTopic returns a tuple with the response and the operation.
+         _, operation = ipc_client.subscribe_to_topic(
+            topic=CLIENT_DEVICE_HELLO_WORLD_TOPIC, on_stream_event=on_hello_world_message)
+         print('Successfully subscribed to topic: %s' %
+               CLIENT_DEVICE_HELLO_WORLD_TOPIC)
+
+         # Keep the main thread alive, or the process will exit.
+         try:
+            while True:
+                  time.sleep(10)
+         except InterruptedError:
+            print('Subscribe interrupted.')
+
+         operation.close()
+      except Exception:
+         print('Exception occurred when using IPC.', file=sys.stderr)
+         traceback.print_exc()
+         exit(1)
+       ```
+       This component uses the IPC client V2 in the [AWS IoT Device SDK v2](https://github.com/aws/aws-iot-device-sdk-python-v2) for Python to communicate with the AWS IoT Greengrass Core software.
+
+   5. Use the Greengrass CLI to deploy the component:
+      ```bash
+      sudo /greengrass/v2/bin/greengrass-cli deployment create \
+      --recipeDir recipes \
+      --artifactDir artifacts \
+      --merge "MyHelloWorldSubscriber=1.0.0"
+      ```
+
+   6. View the component logs to verify that the component installs successfully and subscribes to the topic:
+      ```bash
+      sudo tail -f /greengrass/v2/logs/MyHelloWorldSubscriber.log
+      ```
 
 ## Configure the core device
 
-A AWS Greengrass function can subscribe to or publish messages (using the MQTT protocol):
+An AWS Greengrass function can subscribe to or publish messages (using the MQTT protocol):
 
 * To and from other devices connected to AWS Greengrass core.
 * To other Lambda functions.
