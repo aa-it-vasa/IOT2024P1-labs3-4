@@ -1,4 +1,4 @@
-# Lab 4 - Edge compute with Lambda
+# Lab 4 - Edge computing using Greengrass
 
 ## Overview
 
@@ -18,11 +18,19 @@ and management scheme is necessary. Also, the logic may vary from one gateway
 to another. So we need a solution that scales and handles diverse computational
 needs. 
 
+In this tutorial, you will configure AWS IoT things to use cloud discovery to connect 
+to the core device as client devices. When you configure cloud discovery, a client 
+device can send a request to the AWS IoT Greengrass cloud service to discover core 
+devices. The response from AWS IoT Greengrass includes connectivity information and 
+certificates for the core devices that you configure the client device to discover. 
+Then, the client device can use this information to connect to an available core 
+device where it can communicate over MQTT.
+
 Webservers on gateways and a version control should meet most of the concerns
 expressed above. Coupled with a dashboard to manage all the gateways, this solution
-would scale as more gateways are added. AWS Lambda is a similar solution, but
-without the need to setup a webserver or a dashboard. As a developer, you
-would write the logic using one of the supported languages (Python 3 in this case) and deploy them on
+would scale as more gateways are added. One option is to use the services included in AWS.
+One such solution is AWS Lambda. As a developer, you
+would write the logic using one of the supported languages and deploy them on
 the gateway along with the device certificates, policies etc. 
 
 The programming model of Lambda is event driven, similar to the subscription
@@ -38,10 +46,23 @@ the events, then Lambda can also be configured to run in this fashion.
 AWS Lambda is suitable for running small on-demand applications that are
 reactive in nature. For a heavy duty logic that process multiple streams from
 different sources, you may want to forward the data to the cloud and process
-them there. The course on Cloud Computing handles this topic in detail.
+them there.
 
-In this lab, we will deploy a Lambda function on the gateway and make it
-respond to events sent by cloud as well as devices in the group.
+In this lab, we will not directly utilize AWS functionality for deploying
+Lambda functions, however, everything we do here could be done utilizing the
+web based functionality as well. Instead we will develop the Python code locally 
+and deploy it to the local Raspberry PI using the Greengrass CLI. 
+
+Here we will configure a core device to interact with local IoT devices, 
+called client devices, that connect to the core device over MQTT. 
+This is done by configuring AWS IoT things to use cloud discovery to connect to 
+the core device as client devices. When you configure cloud discovery, a client 
+device can send a request to the AWS IoT Greengrass cloud service to discover core 
+devices. The response from AWS IoT Greengrass includes connectivity information and 
+certificates for the core devices that you configure the client device to discover.
+ Then, the client device can use this information to connect to an available core 
+ device where it can communicate over MQTT.
+
 
 ## Run Greengrass Daemon
 
@@ -61,71 +82,196 @@ rpi> sudo cat /greengrass/v2/logs/greengrass.log
 
 If you cannot get it working, check with the lab assistant or recreate the Greengrass core device like in Lab 3.
 
-## Deploy AWS Lambda on AWS Greengrass Core
+## Enable client device support
 
-You are now ready to configure and deploy the Lambda function for AWS Greengrass.
+For a client device to use cloud discovery to connect to a core device, you must associate the devices. 
+When you associate a client device to a core device, you enable that client device to retrieve the core 
+device's IP addresses and certificates to use to connect.
 
-### Create and Package a Lambda Function
+1. Navigate to the AWS IoT Greengrass console.
+2. In the left navigation menu, choose _Core devices_.
+3. On the _Core devices_ page, choose the core device where you want to enable client device support. This is the same thing you created in Lab 3, i.e. `simthing_GROUPNAME`.
+4. On the core device details page, choose the _Client devices_ tab.
+5. On the _Client devices_ tab, choose _Configure cloud discovery_. 
 
-In order for a Python Lambda function to run on a AWS Greengrass device, it
-must be packaged with specified folders from the Python AWS Greengrass core
-SDK. This step has already been done and you can find an archive
-`hello_world_python_lambda.zip` in the folder `SourceCode\Lab4` in the Github repository. Check the contents of this archive to verify that the code is packaged
-with AWS Greengrass core SDK, which forms the external dependency.  You are now
-ready to upload your Lambda function `.zip` file to the AWS Lambda console.
+   The Configure core device discovery page opens. On this page, you can associate client devices to a core device and deploy client device components. This page selects the core device for you in Step 1: Select target core devices.
 
-1. From the AWS Management console, under _Services > Compute_, click _Lambda_. 
+6. In _Step 2: Associate client devices_, associate the client device's AWS IoT thing to the core device. This enables the client device to use cloud discovery to retrieve the core device's connectivity information and certificates. Do the following:
 
-2. From menu on the left, click _Dashboard_. Click _Create Function_.
+    1. Choose _Associate client devices_.
 
-3. Choose _Author from scratch_ (this option may already be selected).
+    2. In the _Associate client devices with core device_ modal, enter the name of the AWS IoT thing to associate.
 
-4. Give a unique name for your function, e.g. `HelloWorld_GROUPNAME`, and
-   choose `Python 3.12` as _Runtime_. Select _Use an existing role_ and select `service-role/DefaultLambdaRole`
-   in the _Existing Role_ field. Choose _Create function_.
+    3. Choose _Add_.
 
-5. On the _Code source_ section, choose _Upload from .zip file_ and then upload
-   `hello_world_python_lambda.zip`.
+    4. Choose _Associate_.
 
-6. Under _Runtime settings_ (scroll down) make sure that _Python 3.12_ is selected. You will also need to update the _Handler_ field. This is the function that is executed first when the lambda function is triggered: Press _Edit_, then change the field _Handler_ into `greengrassHelloWorld.function_handler`. 
+7. For the _aws.greengrass.clientdevices.Auth_ component, choose _Edit configuration_. 
 
-   Think a moment about what `greengrassHelloWorld.function_handler` corresponds to in the code source window. 
+    In the _Edit configuration_ modal for the client device auth component, configure an authorization policy that allows client devices to publish and subscribe to the MQTT broker on the core device. Do the following:
 
-7. Now is a good time to go through the code in `greengrassHelloWorld.py`. Change the publish topic to `saiot/GROUPNAME/localtocloud`, where `GROUPNAME` is a unique identifier, and write this down.
+8. Under _Configuration_, in the _Configuration to merge_ code block, enter the following configuration, which contains a client device authorization policy. Each device group authorization policy specifies a set of actions and the resources on which a client device can perform those actions.
+   ```json
+   {
+   "deviceGroups": {
+      "formatVersion": "2021-03-05",
+      "definitions": {
+         "MyDeviceGroup": {
+         "selectionRule": "thingName: simthing_GROUPNAME",
+         "policyName": "MyClientDevicePolicy"
+         }
+      },
+      "policies": {
+         "MyClientDevicePolicy": {
+         "AllowConnect": {
+            "statementDescription": "Allow client devices to connect.",
+            "operations": [
+               "mqtt:connect"
+            ],
+            "resources": [
+               "*"
+            ]
+         },
+         "AllowPublish": {
+            "statementDescription": "Allow client devices to publish to all topics.",
+            "operations": [
+               "mqtt:publish"
+            ],
+            "resources": [
+               "*"
+            ]
+         },
+         "AllowSubscribe": {
+            "statementDescription": "Allow client devices to subscribe to all topics.",
+            "operations": [
+               "mqtt:subscribe"
+            ],
+            "resources": [
+               "*"
+            ]
+         }
+         }
+      }
+   }
+   }
+   ```
 
-8. When you are ready to deploy this version press the button _Deploy_. 
-   
-9. To check that there are no issues with the code, you can select the _Test tab_. Note that this is not the same as the Test-button in the code source box. Press the _Test_ button. Also you might need to change the _Event JSON_ input which corresponds to the input given to the lambda function, i.e., there should be a `message` key value pair in the _Event JSON_ field. Also, think about the time out that can be specified on the _Configuration_ tab.
+9. Choose _Confirm_.
 
-10. When you are ready to publish a version of your lambda function (a published version can be access by other parts of AWS) select _Actions > Publish new version_. Write a description in the _Version description_ field, such as _First version_ (or leave it empty), then select _Publish_.
+10. For the _aws.greengrass.clientdevices.mqtt.Bridge_ component, choose _Edit configuration_.
 
-### Configure Lambda for AWS Greengrass
+    In the _Edit configuration_ modal for the MQTT bridge component, configure a topic mapping that relays MQTT messages from client devices to AWS IoT Core. Do the following:
 
-1. In the AWS IoT console, go to _AWS IoT > Manage > Greengrass devices > Components_. Press _Create component_. 
+    1. Under _Configuration_, in the _Configuration to merge_ code block, enter the following configuration. This configuration specifies to relay MQTT messages on the `GROUPNAME/+/hello/world` topic filter from client devices to the AWS IoT Core cloud service:
 
-2. Select _Import Lambda function_.
+         ```json
+         {
+         "mqttTopicMapping": {
+            "HelloWorldIotCoreMapping": {
+               "topic": "GROUPNAME/+/hello/world",
+               "source": "LocalMqtt",
+               "target": "IotCore"
+            }
+         }
+         }
+         ```
 
-3. Search for the name of the Lambda you created in the previous step, and select it. 
+         For more information, see [MQTT bridge component configuration](https://docs.aws.amazon.com/greengrass/v2/developerguide/mqtt-bridge-component.html#mqtt-bridge-component-configuration).
+      
+      2. Choose _Confirm_.
 
-4. For the version, choose the latest version you created.
+11. Choose _Review and deploy_ to review the deployment that this page creates for you.
 
-5. Under _Event sources_ we need to setup the bindings for when the Lambda function should be executed. Press _Add event source_ and set _Topic_ to `saiot/GROUPNAME/localtocloud` and _Type_ to `Local publish/subscribe`. Press _Add event source_ again and set _Topic_ to `saiot/GROUPNAME/cloudtolocal` and _Type_ to `AWS IoT Core MQTT`. The first one will be used to send the message from the VM and the second from the AWS console. 
+12. On the _Review_ page, choose _Deploy_ to start the deployment to the core device.
 
-5. Set the _Timeout_ to `11` or more seconds. Why?
+13. Verify that the deployment succeeds by checking that the _Status_ in the _Deployments_ list change to _Completed_ (this might take some time). 
 
-6. Select `True` under _Pinned_. A *long-lived (pinned) Lambda function* starts automatically after AWS Greengrass starts and keeps running in its own container (or sandbox). 
+## Connect the client device
 
-   Repeatedly triggering the handler of a *long-lived Lambda function* might queues up responses from the AWS IoT Greengrass core. This is in contrast to an *on-demand (not pinned) Lambda function* which might create a new container for a new invocation if the handler in previsouly created containers are still busy (i.e. processing data).
+On the terminal on your local machine, navigate to the samples subfolder of the _aws-iot-device-sdk-python-v2_ folder used in Lab 3.
 
-   After this session, if you have time, you can change the settings and check the difference in behaviour. 
+Run the sample Greengrass discovery application. This application expects arguments that specify the client device thing name, the MQTT topic and message to use, and the certificates that authenticate and secure the connection. The following example sends a Hello World message to the GROUPNAME/MyClientDevice1/hello/world topic.
 
-7. Press _Create component_.
+```bash
+python3 basic_discovery.py \\
+  --thing_name simthing_GROUPNAME \\
+  --topic 'GROUPNAME/MyClientDevice1/hello/world' \\
+  --message 'Hello World!' \\
+  --ca_file root_ca.pem \\
+  --cert publisher_sim.pem.crt \\
+  --key publisher_sim-private.pem.crt \\
+  --region eu-central-1\\
+  --verbosity Warn
+```
+The discovery sample application sends the message 10 times and disconnects. It also subscribes to the same topic where it publishes messages. If the output indicates that the application received MQTT messages on the topic, the client device can successfully communicate with the core device.
 
-### Configure clients
+Verify that the MQTT bridge relays the messages from the client device to AWS IoT Core by using the MQTT test client in the AWS IoT Core console to subscribe to an MQTT topic filter. Do the following:
+1. Navigate to the _AWS IoT console_.
+2. In the left navigation menu, under _Test_, choose _MQTT test client_.
+3. On the _Subscribe to a topic_ tab, for _Topic filter_, enter `GROUPNAME/+/hello/world` to subscribe to client device messages from the core device.
+4. Choose _Subscribe_.
+5. Run the publish/subscribe application on the client device again.
 
-An AWS Greengrass Lambda function can subscribe to or publish messages (using MQTT protocol):
+The MQTT test client displays the messages that you send from the client device on topics that match this topic filter.
 
-* To and from other devices within the AWS Greengrass core.
+## Develop a component that communicates with client devices
+
+You can develop Greengrass components that communicate with client devices. Components use interprocess communication (IPC) and the local publish/subscribe interface to communicate on a core device. To interact with client devices, configure the MQTT bridge component to relay messages between client devices and the local publish/subscribe interface.
+
+In this section, you update the MQTT bridge component to relay messages from client devices to the local publish/subscribe interface. Then, you develop a component that subscribes to these messages and prints the messages when it receives them.
+
+**To develop a component that communicates with client devices**
+
+Revise the deployment to the core device and configure the MQTT bridge component to relay messages from client devices to local publish/subscribe. Do the following:
+
+1. In the left navigation menu in the _AWS IoT Greengrass console_, choose _Core devices_.
+
+2. On the _Core devices_ page, choose the core device that you are using for this tutorial.
+
+3. On the core device details page, choose the _Client devices_ tab.
+
+4. On the _Client devices_ tab, choose _Configure cloud discovery_.
+
+5. The _Configure core device discovery_ page opens. On this page, you can change or configure which client device components deploy to the core device.
+
+6. In _Step 3_, for the _aws.greengrass.clientdevices.mqtt.Bridge_ component, choose _Edit configuration_.
+
+7. In the _Edit configuration_ modal for the MQTT bridge component, configure a topic mapping that relays MQTT messages from client devices to the local publish/subscribe interface. 
+
+   Under _Configuration_, in the _Configuration to merge_ code block, enter the following configuration. This configuration specifies to relay MQTT messages on topics that match the `GROUPNAME/+/hello/world` topic filter from client devices to the AWS IoT Core cloud service and the local Greengrass publish/subscribe broker.
+
+   ```json
+   {
+   "mqttTopicMapping": {
+      "HelloWorldIotCoreMapping": {
+         "topic": "GROUPNAME/+/hello/world",
+         "source": "LocalMqtt",
+         "target": "IotCore"
+      },
+      "HelloWorldPubsubMapping": {
+         "topic": "GROUPNAME/+/hello/world",
+         "source": "LocalMqtt",
+         "target": "Pubsub"
+      }
+   }
+   }
+   ```
+
+8. Choose _Confirm_ and then _Review and deploy_ to review the deployment that this page creates for you.
+
+9. On the _Review_ page, choose _Deploy_ to start the deployment to the core device.
+
+10. To verify that the deployment succeeds, check the status of the deployment, and check the logs on the core device. 
+
+
+
+
+
+## Configure the core device
+
+A AWS Greengrass function can subscribe to or publish messages (using the MQTT protocol):
+
+* To and from other devices connected to AWS Greengrass core.
 * To other Lambda functions.
 * To the AWS IoT cloud.
 
@@ -169,7 +315,7 @@ We will now setup the Greengrass core running on the RPI so that the messages ar
    ```
    Remember to update the topic to the correct one for your group. Also the `yourlambdafunction` should be changed to the name of the Lambda function in Step 2. Press _Confirm_, _Next_, _Next_ and _Deploy_. 
 
-4. Wait until the changes are updated on your RPI (might take a minute or two). Good idea run  
+4. Wait until the changes are updated on your RPI (might take a minute or two). Good idea to run  
    ```
    rpi> sudo tail -f /greengrass/v2/logs/greengrass.log
    ```

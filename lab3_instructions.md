@@ -187,7 +187,7 @@ thing, we will create the key pair and register the public key with AWS IoT in
 one step. 
 
 1. Go to _Manage > All devices > Things_. Press _Create things_ and select _Create single thing_ and press _Next_.  
-2. Enter a unique name for your thing, e.g., `simthing_groupname` and press _Next_. Remember this name!
+2. Enter a unique name for your thing, e.g., `simthing_GROUPNAME` and press _Next_. Remember this name!
 3. We want AWS to generate the certificates and keys that will be used to authorize the communication from the thing, so use the default _Auto-generate a new certificate (recommended)_ and press _Next_. 
 4. In the _Policies_ window, select the `GreengrassV2IoTThingPolicy` and just press _Next_. You can review what the policy contains by clicking on the name of it.
 5. In the window _Download certificates and keys_, download the device certificate, public and private keys and store them in a folder
@@ -321,7 +321,7 @@ Another thing to check is that the certificate for the thing is activated: Open 
    module and `perf_counter()`. See
    [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). (7 p)
    
-   ## Optional Task
+## Optional Task
 
 
 
