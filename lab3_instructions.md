@@ -298,16 +298,12 @@ to automatically stream new lines that are added to the log file to the console.
 
 ## Test the connection
 
-1. From _AWS IoT_ -> _Test_ -> _MQTT test client_, setup a new subscriber to the topic
-   _saiot/GROUPNAME/publish_. Select _Display payloads as strings (more
-   accurate)_ option and then _Subscribe_.
+1. From _AWS IoT_ -> _Test_ -> _MQTT test client_, setup a new subscriber to the topic _saiot/GROUPNAME/publish_. Select _Display payloads as strings (more accurate)_ option and then _Subscribe_.
 2. On your machine, run the following commands
-   
    ```bash
-   local> python aws-iot-device-sdk-python-v2/samples/pubsub.py --endpoint ENDPOINT --key publisher_sim-private.pem.key --cert publisher_sim.pem.crt --client_id simthing_GROUPNAME --topic 'saiot/GROUPNAME/publish' --message 'Hello World From GroupName' 
+   local> python aws-iot-device-sdk-python-v2/samples/pubsub.py --endpoint ENDPOINT --key publisher_sim-private.pem.key --cert publisher_sim.pem.crt --client_id simthing_GROUPNAME --topic 'saiot/GROUPNAME/publish' --message 'Hello World From GROUPNAME' 
    ```
-   You can get the ENDPOINT from _AWS IoT_ -> _Domain configurations_. The value you are searching after is the _Domain name_. The names of topic must match with topic name in all the
-   above steps. Client id option must match the name of the thing.
+   You can get the ENDPOINT from _AWS IoT_ -> _Domain configurations_. The value you are searching after is the _Domain name_. The names of topic must match with topic name in all the above steps. Client id option must match the name of the thing.
 
 3. Verify in the _MQTT test client_ that your messages are received.
 
@@ -319,18 +315,14 @@ The client_id should be same as the Thing name under _Manage > All devices > Thi
 
 Another issue might be that the certificate for the Thing is not activated: Open your Thing under _Manage > All devices > Things_. Under the _Certificates_ tab, there should be a certificate that is indicated as _Active_. 
 
-
-
 ## To do
 
 1. Get a working understanding of the code in `pubsub.py` and explain this shortly in your report. The documentation can be found
    [here](https://github.com/aws/aws-iot-device-sdk-python-v2) (1 p)
 2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (3 p)
-3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Note: Not the entire transfer time! Use, for example, the `time`
-   module and `perf_counter()`. See
-   [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). (7 p)
-4. Repeat the steps above to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will
-try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate the certificate. Instead of using the `simthing_GROUPNAME`, use `Snoopy_Subscriber_GROUPNAME` and try to publish or subscribe to the same topic as before. What happens and why? (3 p)
+3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Note: Not the entire transfer time! Use, for example, the `time` module and `perf_counter()`. See
+   [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). Analyze the results. (4 p)
+4. Repeat the steps above to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate the certificate. Instead of using the `simthing_GROUPNAME`, use `snoopy_subscriber_GROUPNAME` and try to publish or subscribe to the same topic as before. What happens and why? (2 p)
 
 ## Appendix
 
