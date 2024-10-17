@@ -87,7 +87,7 @@ local> git clone https://github.com/aws/aws-iot-device-sdk-python-v2
 We will use a Raspberry Pi as the device gateway. The device is already
 powered up and connected to the network. To connect to the Raspberry Pi,
 you need its IP address. The IP address will be given to you during the lab.
-To be able to reach your gateway from the VM, your laptop also needs to 
+To be able to reach your gateway from your laptop it also needs to 
 be conected to the same network using the same wireless network as in Lab 1. 
 
 To connect to the gateway either use your graphical ssh client and use it to 
@@ -99,29 +99,34 @@ rpi> ssh pi@IPADDRESS
 The username is `pi` and password is `raspberry`.
   
 
-3. Check that Greengrass is not installed and running on the RPI by issuing:
-   ```
-   rpi> sudo systemctl status greengrass.service
-   ``` 
-   If it is installed issue the following commands before continuing 
-   ```
-   rpi> sudo systemctl stop greengrass.service
-   rpi> sudo systemctl disable greengrass.service
-   rpi> sudo rm /etc/systemd/system/greengrass.service
-   rpi> sudo systemctl daemon-reload && sudo systemctl reset-failed
-   rpi> sudo rm -rf /greengrass/v2
-   ```
+Check that Greengrass is not installed and running on the RPI by issuing:
+```bash
+rpi> sudo systemctl status greengrass.service
+```
+If it is installed issue the following commands before continuing 
+```bash
+rpi> sudo systemctl stop greengrass.service
+rpi> sudo systemctl disable greengrass.service
+rpi> sudo rm /etc/systemd/system/greengrass.service
+rpi> sudo systemctl daemon-reload && sudo systemctl reset-failed
+rpi> sudo rm -rf /greengrass/v2
+```
+
+Make sure that the prerequisite packages are installed on the Raspberry PI:
+```bash
+rpi> sudo apt install default-jdk python3-pip
+```
 
 ## Setup Greengrass Core Device
 
-To setup the Greengrass software on the RPI we will use the Greengrass device setup script provided by AWS. This script will
+To setup the Greengrass software on the RPI we will use the Greengrass device setup script provided by AWS. This script will:
 1. Configure your device and installs the AWS IoT Greengrass Core software on it.
 2. Configure your cloud-based resources.
 
 ### Setup the AWS access key
 First we will setup an access key. You only need to do this once per group (as long as you remember the key).
 1. In the AWS Console press your user name in the upper right corner and select _Security credentials_. You do not have permissions to most of the settings on this page, but under _Access keys_ there is the option for you to create a new one. Press _Create access key_ select _Other_ and press _Next_. Provide a description, e.g., your group members and press _Create access key_. 
-2. Save the _Access key_ and _Secret access key_ to a text file on the VM (you can for example select _Download .csv file_).
+2. Save the _Access key_ and _Secret access key_ to a text file on your laptop (you can for example select _Download .csv file_).
 3. Press _Done_.
 
 **Note:** If the _Create access key_ button is deactivated there might already be two assigned keys (which is the maximum). _Deactivate_ and _Delete_ the old keys before adding a new one! Check that the user is not using the access keys before deactivation.
@@ -138,7 +143,9 @@ Perform the following steps to setup the Greengrass software:
 4. Give the core device a unique name that you will remember. For example _GreenGrassCore-groupname_. Write down the name of the core.
 5. Select _Enter a new group name_ under _Thing group_. Give the group a unique name, for example, _GreengrassGroup-groupname_. Write down the name of the group.
 6. Select _Linux_ under _Operating System_.
-7. Some credentials are needed for the script to be able to communicate with the corresponding AWS services. These are the _Access key_ and _Secret access key_ generated in the previous step. It is easiest if these are saved as environmental variables in the shell you are using on the RPI. Execute the following commands on the RPI where the keys are replaced with their correct values. Also remember to remove the `pi>` statement:
+7. Some credentials are needed for the script to be able to communicate with the corresponding AWS services. These are the _Access key_ and _Secret access key_ generated in the previous step. It is easiest if these are saved as environmental variables in the shell you are using on the RPI. 
+
+Execute the following commands on the RPI where the keys are replaced with their correct values. Also remember to remove the `rpi>` statement:
    ```
    rpi> export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
    rpi> export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -175,16 +182,17 @@ Perform the following steps to setup the Greengrass software:
 ## Create Things
 
 Unlike in previous labs, we will not use the Arduino WiFi board to connect to the
-Greengrass Core.  We will instead create a simulated Thing in the terminal. This is because the
-discovery process requires additional library that interacts with AWS IoT core
-using REST APIs. In theory, we can do this with Arduino, but this will require
-writing an additional library, something Arduino is lacking at this time.
+Greengrass Core.  We will instead create a simulated Thing in the terminal of your laptop. This is because the
+discovery process requires additional libraries that interacts with AWS IoT core
+using REST APIs. In theory, we can do this with Arduino.
 Connecting Arduino WiFi to Greengrass is a nice little project of its own and
 you are welcome to try it in your free time :)
 
-The simulated Thing will be your terminal from your computer. To create a new
+The simulated Thing will be your terminal from your laptop. To create a new
 thing, we will create the key pair and register the public key with AWS IoT in
 one step. 
+
+### Create the thing in IoT Core
 
 1. Go to _Manage > All devices > Things_. Press _Create things_ and select _Create single thing_ and press _Next_.  
 2. Enter a unique name for your thing, e.g., `simthing_GROUPNAME` and press _Next_. Remember this name!
@@ -194,16 +202,17 @@ one step.
    `Publisher_Sim` on your machine. You can rename the certificate, public and private key as
    `publisher_sim.pem.crt`, `publisher_sim-public.pem.key` and
    `publisher_sim-private.pem.key`. Note that if you forget to save these at this stage, you will need to recreate the thing!
-6. Finally, download the RSA 2048 root ca from the window. You can also download it from
+6. Finally, download the RSA 2048 root certificate from the window. You can also download it from
    [here](https://www.amazontrust.com/repository/AmazonRootCA1.pem). Save it as `root_ca.pem` in the same folder as they previous certificate and keys. 
 7. Make sure that the Thing you created is visible in the list of things. 
 8. Open the Thing you created and verify that the certificate is active under the _Certificates_ tab.
 
-Now we need to connect the thing we created to the Greengrass core device. 
+### Connect the Thing to the Greengrass core device
+
 1. Under _Manage > Greengrass devices > Core devices_ open the Greengrass core device you created in the previous step by clicking on its name. 
-2. There are several tabs on the detail page of the core device (the RPI's Greengrass instance). 
-   - Components: Here all the different software components deployed to the core device is listed. For example, we have an MQTT broker (Moquette) and a MQTT bridge deployed. It is also possible to deploy what components are deployed under _Manage > Greengrass devices > Deployments_. We will look at this in the next lab.
-   - Client devices: here we can add local Things that will communicate through the Greengrass instance installed on the RPI. These can be, e.g., sensors or actuators (or our simulated thing in this case).
+2. There are several tabs on the detail page of the core device (the Raspberry PI's Greengrass instance). 
+   - Components: Here all the different software components deployed to the core device is listed. For example, we have an MQTT broker (Moquette) and a MQTT bridge deployed. It is also possible to select which components are deployed under _Manage > Greengrass devices > Deployments_. We will look at this in the next lab.
+   - Client devices: here we can add local Things that will communicate through the Greengrass instance installed on the Raspberry PI. These can be, e.g., sensors or actuators (or our simulated thing in this case).
 3. To setup discoverability for the things, select the tab _Client devices_ and press the button _Configure cloud discovery_. Select _Target type_ as _Core device_. The _Target name_ field should be prepopulated with the name of the Greengrass core device name you have created.
 4. Press the button _Associate client devices_. Enter the name of your created thing into the _AWS IoT thing name_ and press _Add_. Then press _Associate_. Make sure that your thing is now in the list _Associated client devices_ on the _Client devices_ tab.
 5. Under _Step 3_ the following items should be checked.
@@ -271,13 +280,13 @@ Now we need to connect the thing we created to the Greengrass core device.
    ```
    Remeber to change GROUPNAME to something unique for your group. You need to write this down as well. Press _Confirm_. 
    
-   This will forward MQTT messages arriving from the local MQTT broker running on the Greengrass instance on the RPI (_LocalMqtt_) to the cloud (_IoTCore_). In the next lab we will need to modify this to allow for bidirectional traffic, but this is fine for now.
+   This will forward MQTT messages arriving from the local MQTT broker running on the Greengrass instance on the Raspberry PI (_LocalMqtt_) to the cloud (_IoTCore_). In the next lab we will need to modify this to allow for bidirectional traffic, but this is fine for now.
 8. Press _Review and deploy_. 
 9. Press _Deploy_.
 
-Now go back to _Manage > Greengrass devices > Deployments_. The deployment you modified will first have the status `Active` which indicates that the changes are being processed on the Greengrass instance on the RPI. After it is finished it will change to `Completed` (it might take over 10 minutes).
+Now go back to _Manage > Greengrass devices > Deployments_. The deployment you modified will first have the status `Active` which indicates that the changes are being processed on the Greengrass instance on the Raspberry PI. After it is finished it will change to `Completed` (it might take over 10 minutes).
 
-To troubleshoot you can view the Greengrass logs on the RPI by executing the following command
+To troubleshoot you can view the Greengrass logs on the Raspberry PI by executing the following command
 ```
 rpi> sudo cat /greengrass/v2/logs/greengrass.log
 ```
@@ -285,7 +294,7 @@ or
 ```
 rpi> sudo tail -f /greengrass/v2/logs/greengrass.log
 ```
-to also print new lines that are printed in the log file. 
+to automatically stream new lines that are added to the log file to the console.
 
 ## Test the connection
 
@@ -294,7 +303,7 @@ to also print new lines that are printed in the log file.
    accurate)_ option and then _Subscribe_.
 2. On your machine, run the following commands
    
-   ```
+   ```bash
    local> python aws-iot-device-sdk-python-v2/samples/pubsub.py --endpoint ENDPOINT --key publisher_sim-private.pem.key --cert publisher_sim.pem.crt --client_id simthing_GROUPNAME --topic 'saiot/GROUPNAME/publish' --message 'Hello World From GroupName' 
    ```
    You can get the ENDPOINT from _AWS IoT_ -> _Domain configurations_. The value you are searching after is the _Domain name_. The names of topic must match with topic name in all the
@@ -308,30 +317,20 @@ If the connection is not established, verify the endpoint is correct. Also verif
 
 The client_id should be same as the Thing name under _Manage > All devices > Things_. 
 
-Another thing to check is that the certificate for the thing is activated: Open your thing under _Manage > All devices > Things_. Under the _Certificates_ tab, there should be a certificate that is indicated as `Active`. 
+Another issue might be that the certificate for the Thing is not activated: Open your Thing under _Manage > All devices > Things_. Under the _Certificates_ tab, there should be a certificate that is indicated as _Active_. 
 
 
 
 ## To do
 
-1. Get a working understanding of the code in `pubsub.py`. The documentation can be found
-   [here](https://github.com/aws/aws-iot-device-sdk-python-v2). 
+1. Get a working understanding of the code in `pubsub.py` and explain this shortly in your report. The documentation can be found
+   [here](https://github.com/aws/aws-iot-device-sdk-python-v2) (1 p)
 2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (3 p)
-3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Use, for example, the `time`
+3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Note: Not the entire transfer time! Use, for example, the `time`
    module and `perf_counter()`. See
    [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). (7 p)
-   
-## Optional Task
-
-
-
-### Verify privacy (3 points)
-
-Repeat the previous steps to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will
-try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate it.
-
-Instead of using the `simthing_GROUPNAME`, use `Snoopy_Subscriber_GROUPNAME` and try
-to publish or subscribe to the same topic. 
+4. Repeat the steps above to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will
+try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate the certificate. Instead of using the `simthing_GROUPNAME`, use `Snoopy_Subscriber_GROUPNAME` and try to publish or subscribe to the same topic as before. What happens and why? (3 p)
 
 ## Appendix
 
