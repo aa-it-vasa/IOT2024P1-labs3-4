@@ -2,95 +2,45 @@
 
 ## Overview
 
-In the previous lab, we organised Things using gateways and ensured that there
-were no unintended cross-talk between devices of different groups. In this lab,
-we will extend the gateway's usefulness to perform close-to-sensor computation.
-Close-to-sensor computation, or edge computation, is a new trend to manage
-high-bandwidth data emerging from the sensors. By processing the data at the
-edge, either completely or partially, we reduce the communication burden on the
-network infrastructure. Also, for a latency critical application a gateway
-reduces the response time between events and manages the risk related to
-network outages.
+In the previous lab, we organised Things using gateways and ensured that there were no unintended cross-talk between devices of different groups. In this lab, we will extend the gateway's usefulness to perform close-to-sensor computation. Close-to-sensor computation, or edge computation, is, for example, used to manage high-bandwidth data emerging from the sensors. By processing the data at the edge, either completely or partially, we reduce the communication burden on the network infrastructure. Also, for a latency-critical application a gateway reduces the response time between events and manages the risk related to network outages. Edge computing can also be used when we are considering sensitive data that we do not want to send over the internet but rather process locally.
 
-There are several concerns with edge computation. Unlike the situation in the lab, you can
-not always rely on the local network to SSH into the device. So a remote deployment
-and management scheme is necessary. Also, the logic may vary from one gateway
-to another. So we need a solution that scales and handles diverse computational
-needs. 
+There are several concerns with edge computation. Unlike the situation in the lab, you can not always rely on the local network to SSH into the device. So a remote deployment and management scheme is often necessary. Also, the logic may vary from one gateway to another. So we need a solution that scales and handles diverse computational needs. 
 
-In this tutorial, you will configure AWS IoT things to use cloud discovery to connect 
-to the core device as client devices. When you configure cloud discovery, a client 
-device can send a request to the AWS IoT Greengrass cloud service to discover core 
-devices. The response from AWS IoT Greengrass includes connectivity information and 
-certificates for the core devices that you configure the client device to discover. 
-Then, the client device can use this information to connect to an available core 
-device where it can communicate over MQTT.
+Webservers on gateways and a version control should meet most of the concerns expressed above. Coupled with a dashboard to manage all the gateways, this solution would scale as more gateways are added. One option is to use the services included in AWS.
+One such solution is AWS Lambda. As a developer, you mwould write the logic using one of the supported languages and deploy them on the gateway along with the device certificates, policies etc. 
 
-Webservers on gateways and a version control should meet most of the concerns
-expressed above. Coupled with a dashboard to manage all the gateways, this solution
-would scale as more gateways are added. One option is to use the services included in AWS.
-One such solution is AWS Lambda. As a developer, you
-would write the logic using one of the supported languages and deploy them on
-the gateway along with the device certificates, policies etc. 
+The programming model of Lambda is event driven, similar to the subscription mechanism of MQTT. Every time a message formatted as JSON document is sent to the lambda either through MQTT or HTTPS, an event is triggered and the function associated with the event is spawned in a virtual container. This on-demand event driven function runs without the need of setting up a server. A side-effect is that in the case of multiple events, multiple independent Lambdas are invoked and managed. AWS calls this pattern as "event-driven serverless computing". If you are interested in running a single Lambda for all the events, then Lambda can also be configured to run in this fashion. 
 
-The programming model of Lambda is event driven, similar to the subscription
-mechanism of MQTT. Every time a message formatted as JSON document is sent to
-the lambda either through MQTT or HTTPS, an event is triggered and the function
-associated with the event is spawned in a virtual container. This on-demand
-event driven function runs without the need of setting up a server. A
-side-effect is that in the case of multiple events, multiple independent
-Lambdas are invoked and managed. AWS calls this pattern as "event-driven
-serverless computing". If you are interested in running a single Lambda for all
-the events, then Lambda can also be configured to run in this fashion. 
+AWS Lambda is suitable for running small on-demand applications that are reactive in nature. For a heavy duty logic that process multiple streams from different sources, you may want to forward the data to the cloud and process them there.
 
-AWS Lambda is suitable for running small on-demand applications that are
-reactive in nature. For a heavy duty logic that process multiple streams from
-different sources, you may want to forward the data to the cloud and process
-them there.
+In this lab, we will not directly utilize AWS functionality for deploying Lambda functions, however, everything we do here could be done utilizing the web based functionality as well. Instead we will develop the Python code locally and deploy it to the local Raspberry PI using the Greengrass CLI. 
 
-In this lab, we will not directly utilize AWS functionality for deploying
-Lambda functions, however, everything we do here could be done utilizing the
-web based functionality as well. Instead we will develop the Python code locally 
-and deploy it to the local Raspberry PI using the Greengrass CLI. 
+Here we will configure a core device to interact with local IoT devices, called client devices, that connect to the core device over MQTT. This is done by configuring AWS IoT things to use cloud discovery to connect to the core device as client devices. When you configure cloud discovery, a client device can send a request to the AWS IoT Greengrass cloud service to discover core devices. The response from AWS IoT Greengrass includes connectivity information and certificates for the core devices that you configure the client device to discover. Then, the client device can use this information to connect to an available core device where it can communicate over MQTT.
 
-Here we will configure a core device to interact with local IoT devices, 
-called client devices, that connect to the core device over MQTT. 
-This is done by configuring AWS IoT things to use cloud discovery to connect to 
-the core device as client devices. When you configure cloud discovery, a client 
-device can send a request to the AWS IoT Greengrass cloud service to discover core 
-devices. The response from AWS IoT Greengrass includes connectivity information and 
-certificates for the core devices that you configure the client device to discover.
- Then, the client device can use this information to connect to an available core 
- device where it can communicate over MQTT.
+## Verify that Greengrass is working
 
-
-## Run Greengrass Daemon
-
-Make sure Greengrass core is running on your RPI. For example check the AWS Console under _AWS IoT > Manage > Greengrass devices > Core devices_. It the status is not `Healthy` and the status reported is less than the amount of time since you rebooted the RPI, then reboot the PI, check e.g., the 
-status of the Greengrass service using:
-```
+Make sure Greengrass core is running on your Raspberry PI. For example check the AWS Console under _AWS IoT > Manage > Greengrass devices > Core devices_. It the status is not `Healthy` and the status reported is less than the amount of time since you rebooted the device, then check the status of the Greengrass service using:
+```bash
 rpi> sudo systemctl status greengrass
 ```
 If it is stopped start it with 
-```
+```bash
 rpi> sudo systemctl start greengrass
 ```
 You can also check the Greengrass log files on the PI with 
-```
+```bash
 rpi> sudo cat /greengrass/v2/logs/greengrass.log
 ```
 
-If you cannot get it working, check with the lab assistant or recreate the Greengrass core device like in Lab 3.
+If you cannot get it working, check with the lab assistant or recreate the Greengrass core device as you did in Lab 3.
 
 ## Enable client device support
 
-For a client device to use cloud discovery to connect to a core device, you must associate the devices. 
-When you associate a client device to a core device, you enable that client device to retrieve the core 
-device's IP addresses and certificates to use to connect.
+For a client device to use cloud discovery to connect to a core device, you must associate the devices. When you associate a client device to a core device, you enable that client device to retrieve the core device's IP addresses and certificates to use to connect.
 
 1. Navigate to the AWS IoT Greengrass console.
 2. In the left navigation menu, choose _Core devices_.
-3. On the _Core devices_ page, choose the core device where you want to enable client device support. This is the same thing you created in Lab 3, i.e. `simthing_GROUPNAME`.
+3. On the _Core devices_ page, choose the core device where you want to enable client device support. This is the same thing you created in Lab 3, i.e., `simthing_GROUPNAME`.
 4. On the core device details page, choose the _Client devices_ tab.
 5. On the _Client devices_ tab, choose _Configure cloud discovery_. 
 
@@ -110,7 +60,7 @@ device's IP addresses and certificates to use to connect.
 
     In the _Edit configuration_ modal for the client device auth component, configure an authorization policy that allows client devices to publish and subscribe to the MQTT broker on the core device. Do the following:
 
-8. Under _Configuration_, in the _Configuration to merge_ code block, enter the following configuration, which contains a client device authorization policy. Each device group authorization policy specifies a set of actions and the resources on which a client device can perform those actions.
+8. Under _Configuration_, in the _Configuration to merge_ code block, enter the following configuration, which contains a client device authorization policy. Each device group authorization policy specifies a set of actions and the resources on which a client device can perform those actions. Remember to update the name of your Thing under _thingName_.
    ```json
    {
    "deviceGroups": {
@@ -165,14 +115,14 @@ device's IP addresses and certificates to use to connect.
     1. Under _Configuration_, in the _Configuration to merge_ code block, enter the following configuration. This configuration specifies to relay MQTT messages on the `GROUPNAME/+/hello/world` topic filter from client devices to the AWS IoT Core cloud service:
 
          ```json
-         {
-         "mqttTopicMapping": {
-            "HelloWorldIotCoreMapping": {
-               "topic": "GROUPNAME/+/hello/world",
-               "source": "LocalMqtt",
-               "target": "IotCore"
+         { 
+            "mqttTopicMapping": {
+               "HelloWorldIotCoreMapping": {
+                  "topic": "GROUPNAME/+/hello/world",
+                  "source": "LocalMqtt",
+                  "target": "IotCore"
+               }
             }
-         }
          }
          ```
 
@@ -210,7 +160,7 @@ Verify that the MQTT bridge relays the messages from the client device to AWS Io
 2. In the left navigation menu, under _Test_, choose _MQTT test client_.
 3. On the _Subscribe to a topic_ tab, for _Topic filter_, enter `GROUPNAME/+/hello/world` to subscribe to client device messages from the core device.
 4. Choose _Subscribe_.
-5. Run the publish/subscribe application on the client device again.
+5. Run the discovery application on the client device again.
 
 The MQTT test client displays the messages that you send from the client device on topics that match this topic filter.
 
@@ -242,18 +192,18 @@ Revise the deployment to the core device and configure the MQTT bridge component
 
    ```json
    {
-   "mqttTopicMapping": {
-      "HelloWorldIotCoreMapping": {
-         "topic": "GROUPNAME/+/hello/world",
-         "source": "LocalMqtt",
-         "target": "IotCore"
-      },
-      "HelloWorldPubsubMapping": {
-         "topic": "GROUPNAME/+/hello/world",
-         "source": "LocalMqtt",
-         "target": "Pubsub"
+      "mqttTopicMapping": {
+         "HelloWorldIotCoreMapping": {
+            "topic": "GROUPNAME/+/hello/world",
+            "source": "LocalMqtt",
+            "target": "IotCore"
+         },
+         "HelloWorldPubsubMapping": {
+            "topic": "GROUPNAME/+/hello/world",
+            "source": "LocalMqtt",
+            "target": "Pubsub"
+         }
       }
-   }
    }
    ```
 
@@ -282,14 +232,14 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
        ```bash
        rpi> nano recipes/MyHelloWorldSubscriber-1.0.0.json
        ```
-      Copy the following recipe into the file:
+      Copy the following recipe into the file. Make sure you understand what this policy does.
       ```json
       {
       "RecipeFormatVersion": "2020-01-25",
       "ComponentName": "MyHelloWorldSubscriber",
       "ComponentVersion": "1.0.0",
       "ComponentDescription": "A component that subscribes to Hello World messages from client devices.",
-      "ComponentPublisher": "Amazon",
+      "ComponentPublisher": "GROUPNAME",
       "ComponentConfiguration": {
          "DefaultConfiguration": {
             "accessControl": {
@@ -321,7 +271,7 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
       }
       ```
 
-   3. Use a text editor to create a Python script artifact named `hello_world_subscriber.py` with the following contents. This application uses the publish/subscribe IPC service to subscribe to the `GROUPNAME/+/hello/world` topic and print messages that it receives.
+   3. Use a text editor to create a Python script artifact named `hello_world_subscriber.py` with the contents specified below. This application uses the publish/subscribe IPC service to subscribe to the `GROUPNAME/+/hello/world` topic and print messages that it receives.
        ```bash
        rpi> nano artifacts/MyHelloWorldSubscriber/1.0.0/hello_world_subscriber.py
        ```
