@@ -319,7 +319,7 @@ Another issue might be that the certificate for the Thing is not activated: Open
 
 1. Get a working understanding of the code in `pubsub.py` and explain this shortly in your report. The documentation can be found
    [here](https://github.com/aws/aws-iot-device-sdk-python-v2) (1 p)
-2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (3 p)
+2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (4 p)
 3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Note: Not the entire transfer time! Use, for example, the `time` module and `perf_counter()`. See
    [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). Analyze the results. (4 p)
 4. Repeat the steps above to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate the certificate. Instead of using the `simthing_GROUPNAME`, use `snoopy_subscriber_GROUPNAME` and try to publish or subscribe to the same topic as before. What happens and why? (2 p)

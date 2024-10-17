@@ -6,18 +6,16 @@
 
 **Lab dates:** _Fill out the dates you did your labs here_
 
-## Work description (3 p)
+## Work description (4 p)
 
 Provide a short description of the setup (hardware and software) and how the different components interact. Explain the steps you performed in the lab, e.g., using screenshots and photos including the received messages on the AWS dashboard.
 
-Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. Check the folder groupCA in your directory. 
+Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. 
 
-## Measure the latency of establishing the connection to the gateway (7 p)
+## Measure the latency of establishing the connection to the gateway (4 p)
 
-Modify `pubSub.py` to measure the latency of establishing the connection to the gateway. Use `time`
-   module and use `perf_counter()` to measure the time. See
-   [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from the VM to your gateway. 
+Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Compare the results to pinging the Greengrass gateway from your laptop. 
 
-## Optional task
+## Simulate a malicious subscriber (2 p)
 
-If you are doing the optional task, write your results here.
+Describe what happens when you subscribe/publish from a Thing without a valid certificate.
