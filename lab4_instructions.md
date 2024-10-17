@@ -352,7 +352,9 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
       ```
 
 ## To do
- 
+
+### Hello world 
+
 1. Describe how the `hello_world_subscriber.py` code that was deployed on the Greengrass device works and how the messages are passed between the devices. (2 p)
 2. Illustrate that everything works by including screenshots. (2 p)
 
