@@ -278,63 +278,31 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
    
    4. Copy the following Python code into the file:
        ```python
-      import awsiot.greengrasscoreipc
-      from awsiot.greengrasscoreipc.model import (PublishToTopicRequest, PublishMessage, BinaryMessage, UnauthorizedError)
+      import sys
+      import time
+      import traceback
 
-      local_topic = 'GROUPNAME/+/localtocloud'
-      cloud_topic = 'GROUPNAME/+/greengrasstocloud'
-      client_topic = 'GROUPNAME/+/greengrasstolocal'
-      command_topic = 'GROUPNAME/+/cloudtogreengrass'
+      from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 
-      my_counter = 0
-      my_platform = platform.platform()
+      CLIENT_DEVICE_HELLO_WORLD_TOPIC = 'GROUPNAME/+/hello/world'
+      TIMEOUT = 10
 
-      def on_local_topic(event):
+      def on_hello_world_message(event):
          try:
-            global my_counter
-            my_counter = my_counter+1
-
-            # The message received through MQTT
-            recv_message = str(event.binary_message.message, 'utf-8')
-
-            # The platform identifier
-            my_platform = platform.platform()
-
-            # Publish and send the message
-            message ="Sent from Greengrass Core running on platform {}. Invocation Count {}. Activation message {} ".format(my_platform, my_counter, recv_message)
-            binary_message = BinaryMessage(message=bytes(message, 'utf-8'))
-            publish_message = PublishMessage(binary_message=binary_message)
-            ipc_client = GreengrassCoreIPCClientV2()
-            ipc_client.publish_to_topic(topic=cloud_topic, publish_message=publish_message)
-            print('Successfully published to topic: ' + cloud_topic)
-            ipc_client.close()
-
+            message = str(event.binary_message.message, 'utf-8')
+            print('Received new message: %s' % message)
          except:
             traceback.print_exc()
 
-      def on_command_topic(event):
-         try:
-            recv_message = str(event.binary_message.message, 'utf-8')
-            message ="Cloud message received: {} ".format(recv_message)
-            binary_message = BinaryMessage(message=bytes(pub_message, 'utf-8'))
-            publish_message = PublishMessage(binary_message=binary_message)
-            ipc_client = GreengrassCoreIPCClientV2()
-            ipc_client.publish_to_topic(topic=client_topic, publish_message=publish_message)
-            print('Successfully published to topic: ' + client_topic)
-            ipc_client.close()
-
-         except:
-            traceback.print_exc()
 
       try:
          ipc_client = GreengrassCoreIPCClientV2()
 
          # SubscribeToTopic returns a tuple with the response and the operation.
-         _, operation = ipc_client.subscribe_to_topic(topic=local_topic, on_stream_event=on_local_topic)
-         print('Successfully subscribed to topic: %s' % local_topic)
-
-         _, operation = ipc_client.subscribe_to_topic(topic=command_topic, on_stream_event=on_command_topic)
-         print('Successfully subscribed to command topic: %s' % command_topic)
+         _, operation = ipc_client.subscribe_to_topic(
+            topic=CLIENT_DEVICE_HELLO_WORLD_TOPIC, on_stream_event=on_hello_world_message)
+         print('Successfully subscribed to topic: %s' %
+               CLIENT_DEVICE_HELLO_WORLD_TOPIC)
 
          # Keep the main thread alive, or the process will exit.
          try:
@@ -383,12 +351,28 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
       rpi> sudo tail -f /greengrass/v2/logs/MyHelloWorldSubscriber.log
       ```
 
-
 ## To do
  
-1. Understand the `greengrassHelloWorld.py` code that was packaged into the Lambda function above.
-2. Connect the simulated device that you created in the last lab, with the Lambda function. The setup you are looking at is given below. You can use `pubsub.py` to publish messages from your device (see Lab 3).
-    1. Device -> Lambda. Device sends message on topic `saiot/GROUPNAME/localtolambda`. Tip: you will need to update some of the settings for the component and deployment above. 
-    2. Lambda -> IoT Cloud. Lambda parses the message sent by the device and forwards it to IoT Cloud on topic `saiot/GROUPNAME/localtocloud`.
-3. In your report describe the achieved architecture and behavior of your application. Use figures to illustrate your description. (5p)
-4. In your report describe the behavior differences between a long-lived Lambda function and an on-demand Lambda function deployed on a gateway. Illustrate your response taking a simple application example and provide the corresponding sequence (UML) diagrams for each. (5p)
+1. Describe how the `hello_world_subscriber.py` code that was deployed on the Greengrass device works and how the messages are passed between the devices. (2 p)
+2. Illustrate that everything works by including screenshots. (2 p)
+
+### Create an IoT system simulating a smart lamp
+
+In this task you should extend the code, policies and MQTT topic mappings to introduce the functionality mentioned below. The idea is to simulate how Greengrass can be used as a controller for local actuators. In this case we will only use one actuator, the _simthing_GROUPNAME_ simulated using the local terminal on your laptop.
+
+3. When a MQTT message with the topic `GROUPNAME/system/change_status`, where the body of the message is either `on` or `off`, is sent from the MQTT client in the AWS Console, this message should be intercepted by the Python script running on the Greengrass core. In turn, the script sends a new MQTT message with the same contents on the topic `GROUPNAME/thing/set_status` to the simulated Thing (i.e., your console running the `basic_discovery` command in listening mode). (2 p)
+4. When this message reaches the simulated Thing running the `basic_discovery` script, it should print the message `Status changed to XX!`, where `XX` is either `on` or `off`. You will need to modify the `basic_discovery.py` file. (1 p)
+5. After the message has been printed, an MQTT message should be sent to the Python script running on Greengrass on the topic `GROUPNAME/thing/status` with the body is either `on` or `off` depending on the issued command. You do not need to remember the state, only mirror the received command. (1 p)
+6. This message should be mirrored to IoT Core on the topic `GROUPNAME/system/status`. (1 p)
+7. Verify that this works by sending the two different commands `on` and `off` on the correct topics from the MQTT Client in IoT Core and monitoring the component log file on the Raspberry PI and the output of the modified `basic_discover` script. (1 p)
+8. Illustrate how the messages are routed and explain the modfications needed to the policies and MQTT topic mappings (2 p).
+
+Note that this is not a trivial task. Good planning and the ability to search for additional information is needed. You also do not normally need to do this task unless you want a high grade! Therefore only limited help will be provided by the lab assistants.
+
+### Tips!
+- You will need to allow Greengrass to also publish (c.f., `aws.greengrass#PublishToTopic`). Publishing can be done by invoking the function `publish_to_topic()` provided by `GreengrassCoreIPCClientV2`.
+- You will need to set up correct MQTT mappings between `IoTCore`, `PubSub` and `LocalMQTT`, and understand the differences between these. 
+- Sometimes Greengrass does not update to the newest version of the component code when updating it. Then a restart of the Greengrass service can be helpful:
+   ```bash
+   rpi> sudo systemctl restart greengrass
+   ```
