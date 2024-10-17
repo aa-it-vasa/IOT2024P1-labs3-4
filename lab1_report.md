@@ -2,9 +2,9 @@
 
 **Description:** _Get a working understanding of the MQTT protocol. Setup a rudimentary publisher and subscriber using a openly available broker._
 
-**Group members:** _Fill group member names here_
+**Group members:** Sebastian Horsch, Anna Vítová
 
-**Lab dates:** _Fill out the dates you did your labs here_
+**Lab dates:** 2nd and 15th October 2024
 
 ## Introduction (3 p)
 
