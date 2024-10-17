@@ -356,9 +356,9 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
 1. Describe how the `hello_world_subscriber.py` code that was deployed on the Greengrass device works and how the messages are passed between the devices. (2 p)
 2. Illustrate that everything works by including screenshots. (2 p)
 
-### Create an IoT system simulating a smart lamp
+### Create an IoT system simulating a local controller gateway and actuator
 
-In this task you should extend the code, policies and MQTT topic mappings to introduce the functionality mentioned below. The idea is to simulate how Greengrass can be used as a controller for local actuators. In this case we will only use one actuator, the _simthing_GROUPNAME_ simulated using the local terminal on your laptop.
+In this task you should extend the code, policies and MQTT topic mappings to introduce the functionality mentioned below. The idea is to simulate how Greengrass can be used as a controller gateway for local actuators. In this case we will only use one actuator, the _simthing_GROUPNAME_ simulated using the local terminal on your laptop.
 
 3. When a MQTT message with the topic `GROUPNAME/system/change_status`, where the body of the message is either `on` or `off`, is sent from the MQTT client in the AWS Console, this message should be intercepted by the Python script running on the Greengrass core. In turn, the script sends a new MQTT message with the same contents on the topic `GROUPNAME/thing/set_status` to the simulated Thing (i.e., your console running the `basic_discovery` command in listening mode). (2 p)
 4. When this message reaches the simulated Thing running the `basic_discovery` script, it should print the message `Status changed to XX!`, where `XX` is either `on` or `off`. You will need to modify the `basic_discovery.py` file. (1 p)
