@@ -263,7 +263,7 @@ We will now develop and deploy a Greengrass component that subscribes to Hello W
             "os": "linux"
             },
             "Lifecycle": {
-            "install": "python3 -m pip install --user awsiotsdk",
+            "install": "python3 -m pip install --user awsiotsdk --break-system-packages",
             "run": "python3 -u {artifacts:path}/hello_world_subscriber.py"
             }
          }
