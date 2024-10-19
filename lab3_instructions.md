@@ -278,7 +278,7 @@ one step.
       }
    }
    ```
-   Remeber to change GROUPNAME to something unique for your group. You need to write this down as well. Press _Confirm_. 
+   Remember to change GROUPNAME to something unique for your group. You need to write this down as well. Press _Confirm_. 
    
    This will forward MQTT messages arriving from the local MQTT broker running on the Greengrass instance on the Raspberry PI (_LocalMqtt_) to the cloud (_IoTCore_). In the next lab we will need to modify this to allow for bidirectional traffic, but this is fine for now.
 8. Press _Review and deploy_. 
@@ -301,7 +301,13 @@ to automatically stream new lines that are added to the log file to the console.
 1. From _AWS IoT_ -> _Test_ -> _MQTT test client_, setup a new subscriber to the topic _saiot/GROUPNAME/publish_. Select _Display payloads as strings (more accurate)_ option and then _Subscribe_.
 2. On your machine, run the following commands
    ```bash
-   local> python aws-iot-device-sdk-python-v2/samples/pubsub.py --endpoint ENDPOINT --key publisher_sim-private.pem.key --cert publisher_sim.pem.crt --client_id simthing_GROUPNAME --topic 'saiot/GROUPNAME/publish' --message 'Hello World From GROUPNAME' 
+   local> python aws-iot-device-sdk-python-v2/samples/pubsub.py \
+           --endpoint ENDPOINT \ 
+           --key publisher_sim-private.pem.key \ 
+           --cert publisher_sim.pem.crt \
+           --client_id simthing_GROUPNAME \
+           --topic 'saiot/GROUPNAME/publish' \ 
+           --message 'Hello World From GROUPNAME' 
    ```
    You can get the ENDPOINT from _AWS IoT_ -> _Domain configurations_. The value you are searching after is the _Domain name_. The names of topic must match with topic name in all the above steps. Client id option must match the name of the thing.
 
@@ -322,7 +328,13 @@ Another issue might be that the certificate for the Thing is not activated: Open
 2. Explain how the Thing connects to your gateway, including TLS mutual authentication. Use relevant diagrams. (4 p)
 3. Modify `pubsub.py` to measure the latency of establishing the connection to the gateway. Note: Not the entire transfer time! Use, for example, the `time` module and `perf_counter()`. See
    [documentation](https://docs.python.org/3/library/time.html#time.perf_counter). Compare the measured time with the ping value optained from your local machine to your gateway (`ping IPADRESS`). Analyze the results. (4 p)
-4. Repeat the steps above to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate the certificate. Instead of using the `simthing_GROUPNAME`, use `snoopy_subscriber_GROUPNAME` and try to publish or subscribe to the same topic as before. What happens and why? (2 p)
+4. Repeat the steps above to create another Thing. Call it _Snoopy_subscriber_GROUPNAME_. We will try to simulate a malicious subscriber using this Thing. After creation, open the _Snoopy_subscriber_GROUPNAME_ thing (under _All Things_, _Things_). Then open the _Certificates_ tab and select the certificate. Now press _Detach_ to deactivate the certificate. 
+
+   After this we need to deploy everything so that the Core Greengrass device gets the updated configuration. This is done under _Greengrass devices -> Deployments_. Select the deployment with the correct _Target name_ and where the _Target type_ is _Core device_. Then click _Revise_. Press _Next_ until you get to the _Review_ screen. Then click _Deploy_. 
+
+   Wait until the deployment is in the status _Completed_ then continue. 
+   
+   Instead of using the `simthing_GROUPNAME`, use `snoopy_subscriber_GROUPNAME` and try to publish or subscribe to the same topic as before. What happens and why? (2 p)
 
 ## Appendix
 
