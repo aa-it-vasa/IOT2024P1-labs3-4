@@ -25,3 +25,7 @@ The value returned by this method is a boolean. So it is either true or false, w
 ## Command and response (8 p)
 
 Implement the functionality required in the lab instructions and provide the code according to the instructions. Explain in your report how your code works and provide the block diagram requested.
+
+![image](https://github.com/user-attachments/assets/edf2cb5e-2d16-4df1-a709-5b14dfe22770)
+
+
