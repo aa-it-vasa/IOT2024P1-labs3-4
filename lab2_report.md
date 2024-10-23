@@ -3,9 +3,9 @@
 **Description:** _Establish a secure MQTT connection and understand various parts of
    the setup._
 
-**Group members:** _Fill group member names here_
+**Group members:** Sebastian Horsch, Anna Vítová
 
-**Lab dates:** _Fill out the dates you did your labs here_
+**Lab dates:** 15.October.2024
 
 ## Work description (4 p)
 
