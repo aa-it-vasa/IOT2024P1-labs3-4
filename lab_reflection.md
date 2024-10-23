@@ -2,9 +2,9 @@
 
 **Description:** _Provide a reflection on what you learned during this lab here._
 
-**Group members:** _Fill group member names here_
+**Group members:** Sebastian Horsch, Anna Vítová
 
-**Lab dates:** _Fill out the dates you did your labs here_
+**Lab dates:** 2.October and 15.October 2024
 
 ## Have you learned anything new?
 
