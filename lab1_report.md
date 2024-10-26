@@ -29,6 +29,16 @@ Interaction of Components:
 
 - The Arduino reads temperature from the thermistor through its analog input pin. Then it converts the data and publishes it to the MQTT broker via WiFi. The MQTT broker stores the data and then all clients that subscribed to it will recive them as an update. The Arduino is also set up to receive MQTT messages on a specific topic, for example that it has an specific reponse to commands like ON, OFF or TEMP.
 
+Steps performed in the Lab: 
+
+1. Installed the Arduino IDE, added necessary libraries, and configured the board type and serial port
+2. Assembled the MKR WiFi1010 board on the breadboard, then connected the thermistor according to the circuit diagram. After this the breadboard was contnected to the computer using USB
+3. Configuration of the MQTT broker's address and topics and ensuring that the topic names are unique
+4. Upload of the test sketches and checking if the MQTT broker is publishing and the subscription works. Then we checked the temperature readings
+5. Analyse of the existing code
+6. Implemention of the new logic for the commands ON, OFF and TEMP
+7. Testing of the implementation and finalization of the code 
+
 ## How does the `getTemp` function work (1 p)
 First in the function five variables are initialized. After that a loop is run through ten times. Each time first the method analogRead() reads the sensors raw voltage, which is then multiplied and divided by specific numbers. After that the temperature is calculated and save in the variable. Then the the program waits for 0.1 seconds and adds the temperature up into the variable ten_sample_sum. When the loop is finished the return parameter gives the added temperature divided by the amount of loop runs back.  
 
