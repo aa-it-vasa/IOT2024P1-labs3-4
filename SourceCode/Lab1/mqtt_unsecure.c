@@ -11,15 +11,14 @@
 // ArduinoMqttClient - Version: Latest 
 #include <ArduinoMqttClient.h>
 #include "arduino_secrets.h" // you need to create this header file (open a new tab) containing:
-//#define SECRET_SSID "BUFFALO2"
-//#define SECRET_PASS "pleaseletmein"
+#include "string.h"
 
 #define TEMPSENSOR A0 //analog input pin
 
 ///////please enter your sensitive data in a filearduino_secrets.h (open a new tab)
-char ssid[] = SECRET_SSID;        // your network SSID (name)
-char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
-String group = "MyGroup";   // UPDATE THIS with an unique name for your group
+char ssid[] = SECRET_SSID; // your network SSID (name)
+char pass[] = SECRET_PASS; // your network password (use for WPA, or use as key for WEP)
+String group = "TurkuGroupD"; // UPDATE THIS with an unique name for your group
 int status = WL_IDLE_STATUS;
 
 WiFiClient wifiClient;
@@ -27,8 +26,8 @@ MqttClient mqttClient(wifiClient);
 
 const char broker[] = "broker.hivemq.com";
 int        port     = 1883;
-String responseTopic  = "saiot/19/" + group + "/response";
-String commandTopic = "saiot/19/" + group + "/command";
+String responseTopic  = "saiot/" + group + "/response";
+String commandTopic = "saiot/" + group + "/command";
 
 // Time related functions
 const unsigned long interval = 1000;
@@ -111,11 +110,6 @@ void loop() {
         Serial.print(currentMillis - previousMillis);
         Serial.print(" us.");
 
-        float temperature = getTemp();
-        mqttClient.beginMessage(responseTopic);
-        mqttClient.print(temperature);
-        mqttClient.print(" deg. C");
-        mqttClient.endMessage();
         previousMillis = currentMillis;
 
         Serial.println();
@@ -209,10 +203,30 @@ void onMqttMessage(int messageSize) {
   Serial.print(messageSize);
   Serial.println(" bytes:");
 
+const int ledPin = LED_BUILTIN;
+int ledState = 0; 
+String command;
+
   // use the Stream interface to print the contents
   while (mqttClient.available()) {
-    Serial.print((char)mqttClient.read());
+        command += (char)mqttClient.read();
   }
+
+  if(command == "ON"){
+    ledState = 1; 
+  }else if(command == "OFF"){
+    ledState = 0; 
+  } else if(command == "TEMP"){
+        mqttClient.poll();
+        float temperature = getTemp();
+        mqttClient.beginMessage(responseTopic);
+        mqttClient.print(temperature);
+        mqttClient.print(" deg.C");
+        mqttClient.endMessage();
+  }
+  digitalWrite(ledPin, ledState);
+
   Serial.println();
   Serial.println();
+
 }
