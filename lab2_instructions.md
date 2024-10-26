@@ -137,9 +137,8 @@ The downside is that every device has to now generate a X509 certificate, instal
 ## References
 
 1. [Public Key Infrastructure](https://web.archive.org/web/20170220183843/http://www.net-security-training.co.uk/what-is-a-public-key-infrastructure)
-2. [PKI for busy people](https://rehn.me/posts/pki-for-busy-people.html)
-3. [Certificate management for Embedded Systems](https://realtimelogic.com/blog/2013/10/Certificate-Management-for-Embedded-Systems)
+2. [Certificate management for Embedded Systems](https://realtimelogic.com/blog/2013/10/Certificate-Management-for-Embedded-Systems)
 3. [MQTT Security Fundamentals](https://www.hivemq.com/mqtt-security-fundamentals/)
-4. [IoT security: when X.509 certificate authentication may not work](https://www.embedded.com/print/4442799)
+4. [IoT security: when X.509 certificate authentication may not work](https://www.embedded.com/iot-security-when-x-509-certificate-authentication-may-not-work/)
 5. [MQTT Wiki](https://github.com/mqtt/mqtt.github.io/wiki)
 6. [MQTT Protocol v3.1.1 - Chapter 5, Security](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.pdf)
