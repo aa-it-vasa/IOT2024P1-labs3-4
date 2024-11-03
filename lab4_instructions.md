@@ -149,7 +149,7 @@ local> python3 basic_discovery.py \
   --message 'Hello World!' \
   --ca_file root_ca.pem \
   --cert publisher_sim.pem.crt \
-  --key publisher_sim-private.pem.crt \
+  --key publisher_sim-private.pem.key \
   --region eu-central-1 \
   --verbosity Warn
 ```
