@@ -302,12 +302,12 @@ to automatically stream new lines that are added to the log file to the console.
 2. On your machine, run the following commands
    ```bash
    local> python aws-iot-device-sdk-python-v2/samples/pubsub.py \
-           --endpoint ENDPOINT \ 
-           --key publisher_sim-private.pem.key \ 
+           --endpoint ENDPOINT \
+           --key publisher_sim-private.pem.key \
            --cert publisher_sim.pem.crt \
            --client_id simthing_GROUPNAME \
-           --topic 'saiot/GROUPNAME/publish' \ 
-           --message 'Hello World From GROUPNAME' 
+           --topic 'saiot/GROUPNAME/publish' \
+           --message 'Hello World From GROUPNAME'
    ```
    You can get the ENDPOINT from _AWS IoT_ -> _Domain configurations_. The value you are searching after is the _Domain name_. The names of topic must match with topic name in all the above steps. Client id option must match the name of the thing.
 
